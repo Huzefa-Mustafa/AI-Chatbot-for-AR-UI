@@ -44,8 +44,8 @@ const Ghar = () => {
 
     try {
       const response = await axios.post('http://localhost:8000/ask', {
-        context,
-        question,
+        context: context,
+        question: question,
       },{
         headers: {
           'Content-Type': 'application/json',
