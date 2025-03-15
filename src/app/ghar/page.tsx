@@ -1,67 +1,119 @@
-"use client";
+// app/ghar.tsx
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
+import axios from 'axios';
 
-export default function Ghar() {
-  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
-  const [input, setInput] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+const Ghar = () => {
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [summary, setSummary] = useState<string>('');
+  const [question, setQuestion] = useState<string>('');
+  const [context, setContext] = useState<string>('');
+  const [answer, setAnswer] = useState<string>('');
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setMessages([...messages, { sender: "You", text: input }]);
-    setInput(""); // Clear input
+  // Handle PDF file upload
+  const handlePdfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPdfFile(file);
+    }
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files?.length) {
-      setSelectedFile(event.target.files[0]);
+  // Handle summary request
+  const handleSummarize = async () => {
+    if (!pdfFile) return;
+
+    const formData = new FormData();
+    formData.append('file', pdfFile);
+
+    try {
+      const response = await axios.post('http://localhost:8000/summarize', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setSummary(response.data.summary);
+    } catch (error) {
+      console.error('Error summarizing PDF:', error);
+    }
+  };
+
+  // Handle Q&A request
+  const handleAsk = async () => {
+    if (!question || !context) return;
+
+    try {
+      const response = await axios.post('http://localhost:8000/ask', {
+        context,
+        question,
+      },{
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      setAnswer(response.data.answer);
+    } catch (error) {
+      console.error('Error asking question:', error);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-      {/* Chat Box */}
-      <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-4">
-        <h1 className="text-xl font-bold mb-2 text-gray-800">AI for Academic Research</h1>
-        <div className="h-64 overflow-y-auto border rounded p-3 bg-gray-50">
-          {messages.length === 0 ? (
-            <p className="text-gray-400 text-center">No messages yet.</p>
-          ) : (
-            messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`p-2 my-1 rounded-lg ${
-                  msg.sender === "You" ? "bg-blue-500 text-white self-end" : "bg-gray-300"
-                }`}
-              >
-                <span className="font-semibold">{msg.sender}:</span> {msg.text}
-              </div>
-            ))
-          )}
-        </div>
+    <div className="p-4">
+      <h1 className="text-3xl font-bold mb-4">Academic AI Chatbot</h1>
 
-        {/* Chat Input */}
-        <div className="flex mt-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-grow p-2 border rounded-l-md focus:outline-none"
-            placeholder="Type a message..."
-          />
-          <button onClick={sendMessage} className="bg-blue-500 text-white px-4 rounded-r-md">
-            Send
-          </button>
-        </div>
+      {/* PDF Upload Section */}
+      <div className="mb-4">
+        <input type="file" onChange={handlePdfChange} accept="application/pdf" />
+        <button
+          onClick={handleSummarize}
+          className="bg-blue-500 text-white py-2 px-4 mt-2"
+        >
+          Summarize PDF
+        </button>
       </div>
 
-      {/* File Upload */}
-      <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-4 mt-4">
-        <h2 className="text-lg font-bold mb-2 text-gray-800">Upload Your Research PDF</h2>
-        <input type="file" accept="application/pdf" onChange={handleFileChange} className="mb-2" />
-        {selectedFile && <p className="text-sm text-gray-600">Selected: {selectedFile.name}</p>}
+      {/* Display PDF Summary */}
+      {summary && (
+        <div className="mt-4 p-4 border border-gray-300">
+          <h2 className="text-xl font-semibold">Summary:</h2>
+          <p>{summary}</p>
+        </div>
+      )}
+
+      {/* Q&A Section */}
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-2">Ask a Question</h2>
+        <textarea
+          className="w-full p-2 border border-gray-300 mb-2"
+          rows={4}
+          placeholder="Enter the context here"
+          value={context}
+          onChange={(e) => setContext(e.target.value)}
+        ></textarea>
+        <input
+          type="text"
+          className="w-full p-2 border border-gray-300 mb-2"
+          placeholder="Ask a question"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+        />
+        <button
+          onClick={handleAsk}
+          className="bg-green-500 text-white py-2 px-4"
+        >
+          Ask
+        </button>
       </div>
+
+      {/* Display Q&A Answer */}
+      {answer && (
+        <div className="mt-4 p-4 border border-gray-300">
+          <h2 className="text-xl font-semibold">Answer:</h2>
+          <p>{answer}</p>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default Ghar;
